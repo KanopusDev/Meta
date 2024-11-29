@@ -1,6 +1,11 @@
 import requests
-from config import settings
-from models import WhatsAppTemplate
+from app.core.config import settings
+from app.models import WhatsAppTemplate
+from fastapi import APIRouter, HTTPException, Request
+from app.models.messages import ScheduledMessage, MessageResponse
+from app.core.scheduler import scheduler
+
+router = APIRouter()
 
 class WhatsAppClient:
     def __init__(self):
@@ -60,3 +65,30 @@ class WhatsAppClient:
         payload = {"name": template_name}
         response = requests.delete(url, headers=self.headers, json=payload)
         return response.json()
+
+@router.post("/webhook")
+async def webhook_handler(request: Request):
+    body = await request.json()
+    if "messages" in body["entry"][0]["changes"][0]["value"]:
+        message = body["entry"][0]["changes"][0]["value"]["messages"][0]
+        return MessageResponse(
+            from_number=message["from"],
+            message=message["text"]["body"],
+            timestamp=message["timestamp"]
+        )
+    return {"status": "no_message"}
+
+@router.get("/webhook")
+async def verify_webhook(token: str):
+    if token == settings.WEBHOOK_VERIFY_TOKEN:
+        return {"challenge": token}
+    raise HTTPException(status_code=403, detail="Invalid verification token")
+
+@router.post("/schedule")
+async def schedule_message(message: ScheduledMessage):
+    job_id = scheduler.schedule_message(
+        message.recipient,
+        message.message,
+        message.scheduled_time
+    )
+    return {"job_id": job_id}

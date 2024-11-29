@@ -1,21 +1,21 @@
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
-from whatsapp_client import WhatsAppClient
-from instagram_client import InstagramClient
+from apscheduler.triggers.date import DateTrigger
+from app.api.whatsapp_client import WhatsAppClient
+from app.api.instagram_client import InstagramClient
 
 class MessageScheduler:
     def __init__(self):
         self.scheduler = BackgroundScheduler()
         self.scheduler.start()
-        self.whatsapp = WhatsAppClient()
+        self.whatsapp_client = WhatsAppClient()
         self.instagram = InstagramClient()
 
-    def schedule_message(self, phone: str, message: str, send_time: datetime):
+    def schedule_message(self, recipient: str, message: str, scheduled_time):
         job = self.scheduler.add_job(
-            self.whatsapp.send_message,
-            'date',
-            run_date=send_time,
-            args=[phone, message]
+            self.whatsapp_client.send_message,
+            trigger=DateTrigger(run_date=scheduled_time),
+            args=[recipient, message]
         )
         return job.id
 
@@ -45,3 +45,8 @@ class MessageScheduler:
             args=[recipient_id, media_url, media_type]
         )
         return job.id
+
+    def cancel_message(self, job_id: str):
+        self.scheduler.remove_job(job_id)
+
+scheduler = MessageScheduler()
