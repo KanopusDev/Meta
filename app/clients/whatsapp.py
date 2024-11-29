@@ -1,13 +1,9 @@
 import requests
 from app.core.config import settings
 from app.models.templates import WhatsAppTemplate
-from fastapi import APIRouter, HTTPException, Request
-from app.models.messages import ScheduledMessage, MessageResponse
-from app.core.scheduler import scheduler
-from app.clients.whatsapp import WhatsAppClient
-
-router = APIRouter()
-whatsapp_client = WhatsAppClient()
+from circuitbreaker import circuit
+from app.utils.monitoring import monitor_request
+from app.utils.metrics import whatsapp_requests, whatsapp_latency
 
 class WhatsAppClient:
     def __init__(self):
@@ -70,29 +66,30 @@ class WhatsAppClient:
         response = requests.delete(url, headers=self.headers, json=payload)
         return response.json()
 
-@router.post("/webhook")
-async def webhook_handler(request: Request):
-    body = await request.json()
-    if "messages" in body["entry"][0]["changes"][0]["value"]:
-        message = body["entry"][0]["changes"][0]["value"]["messages"][0]
-        return MessageResponse(
-            from_number=message["from"],
-            message=message["text"]["body"],
-            timestamp=message["timestamp"]
-        )
-    return {"status": "no_message"}
+    def get_message_status(self, message_id: str):
+        url = f"{self.base_url}/messages/{message_id}"
+        response = requests.get(url, headers=self.headers)
+        return response.json()
 
-@router.get("/webhook")
-async def verify_webhook(token: str):
-    if token == settings.WEBHOOK_VERIFY_TOKEN:
-        return {"challenge": token}
-    raise HTTPException(status_code=403, detail="Invalid verification token")
+    @circuit(failure_threshold=5, recovery_timeout=60)
+    @monitor_request(whatsapp_requests, whatsapp_latency)
+    def send_media(self, to_phone: str, media_url: str, media_type: str):
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to_phone,
+            "type": media_type,
+            media_type: {"link": media_url}
+        }
+        
+        response = requests.post(self.api_url, headers=self.headers, json=payload)
+        return response.json()
 
-@router.post("/schedule")
-async def schedule_message(message: ScheduledMessage):
-    job_id = scheduler.schedule_message(
-        message.recipient,
-        message.message,
-        message.scheduled_time
-    )
-    return {"job_id": job_id}
+    def mark_as_read(self, message_id: str):
+        payload = {
+            "messaging_product": "whatsapp",
+            "status": "read",
+            "message_id": message_id
+        }
+        response = requests.post(f"{self.base_url}/messages", headers=self.headers, json=payload)
+        return response.json()
