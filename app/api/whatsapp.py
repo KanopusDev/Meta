@@ -4,8 +4,15 @@ from app.models import WhatsAppTemplate
 from fastapi import APIRouter, HTTPException, Request
 from app.models.messages import ScheduledMessage, MessageResponse
 from app.core.scheduler import scheduler
+from circuitbreaker import circuit
+from prometheus_client import Counter, Histogram
+from app.utils.monitoring import monitor_request
 
 router = APIRouter()
+
+# Metrics
+whatsapp_requests = Counter('whatsapp_requests_total', 'Total WhatsApp API requests')
+whatsapp_latency = Histogram('whatsapp_request_latency_seconds', 'WhatsApp API latency')
 
 class WhatsAppClient:
     def __init__(self):
@@ -16,7 +23,9 @@ class WhatsAppClient:
         }
         self.base_url = f"https://graph.facebook.com/v21.0/{settings.WHATSAPP_PHONE_NUMBER_ID}"
 
-    def send_message(self, to_phone: str, message: str):
+    @circuit(failure_threshold=5, recovery_timeout=60)
+    @monitor_request(whatsapp_requests, whatsapp_latency)
+    async def send_message(self, to_phone: str, message: str):
         payload = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
