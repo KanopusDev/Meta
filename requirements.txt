@@ -1,0 +1,11 @@
+Flask
+Flask-Cors
+Flask-JWT-Extended
+Flask-SQLAlchemy
+fastapi
+uvicorn
+python-dotenv
+requests
+pydantic
+apscheduler
+python-multipart
