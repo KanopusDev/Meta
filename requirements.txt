@@ -16,3 +16,5 @@ prometheus-fastapi-instrumentator
 sentry-sdk
 aiosqlite
 circuitbreaker
+pandas
+phonenumbers

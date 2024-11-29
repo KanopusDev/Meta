@@ -3,6 +3,7 @@ from app.core.config import settings
 from app.models.templates import WhatsAppTemplate
 from circuitbreaker import circuit
 from app.utils.monitoring import monitor_request
+from app.models.messages import TemplateContent, MediaContent, Button
 
 class WhatsAppClient:
     def __init__(self):
@@ -91,4 +92,58 @@ class WhatsAppClient:
             "message_id": message_id
         }
         response = requests.post(f"{self.base_url}/messages", headers=self.headers, json=payload)
+        return response.json()
+
+    def send_template_with_content(self, to_phone: str, template_name: str, content: TemplateContent, language_code: str = "en"):
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_phone,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": language_code},
+                "components": []
+            }
+        }
+
+        # Add header if present
+        if content.header:
+            if isinstance(content.header, MediaContent):
+                payload["template"]["components"].append({
+                    "type": "header",
+                    "parameters": [{
+                        "type": content.header.type,
+                        "url": content.header.url
+                    }]
+                })
+            else:
+                payload["template"]["components"].append({
+                    "type": "header",
+                    "parameters": [{"type": "text", "text": content.header}]
+                })
+
+        # Add body
+        payload["template"]["components"].append({
+            "type": "body",
+            "parameters": [{"type": "text", "text": content.body}]
+        })
+
+        # Add buttons if present
+        if content.buttons:
+            button_component = {"type": "buttons", "buttons": []}
+            for btn in content.buttons:
+                if btn.type == "url":
+                    button_component["buttons"].append({
+                        "type": "url",
+                        "text": btn.text,
+                        "url": str(btn.url)
+                    })
+                else:
+                    button_component["buttons"].append({
+                        "type": "quick_reply",
+                        "text": btn.text
+                    })
+            payload["template"]["components"].append(button_component)
+
+        response = requests.post(self.api_url, headers=self.headers, json=payload)
         return response.json()

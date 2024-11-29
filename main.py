@@ -9,7 +9,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.utils.db import db
 import logging.config
 from app.core.logging_config import LOGGING_CONFIG
-from app.api import whatsapp, instagram, templates
+from app.api import whatsapp, instagram, template_routes, stats
 from app.core.config import settings
 from app.middleware.auth import auth_middleware
 
@@ -46,29 +46,22 @@ Instrumentator().instrument(app).expose(app)
 # Include routers
 app.include_router(whatsapp.router, prefix="/api/whatsapp", tags=["WhatsApp"])
 app.include_router(instagram.router, prefix="/api/instagram", tags=["Instagram"])
-app.include_router(templates.router, prefix="/api/templates", tags=["Templates"])
+app.include_router(template_routes.router, prefix="/api/templates", tags=["Templates"])
+app.include_router(stats.router, prefix="/api/stats", tags=["Statistics"])
 
 @app.on_event("startup")
 async def startup_event():
-    await db.connect()
-    logger.info("Application startup completed")
+    try:
+        await db.connect()
+        logger.info("Application startup completed")
+    except Exception as e:
+        logger.critical(f"Failed to start application: {str(e)}", exc_info=True)
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await db.close()
     logger.info("Application shutdown completed")
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    try:
-        response = await call_next(request)
-        return response
-    except Exception as e:
-        logger.error(f"Request failed: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"}
-        )
 
 # Add authentication middleware
 app.middleware("http")(auth_middleware)
@@ -90,10 +83,6 @@ async def validate_request(request: Request, call_next):
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to Meta Messaging API"}
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

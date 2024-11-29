@@ -1,11 +1,14 @@
 import requests
 from app.core.config import settings
-from app.models.templates import WhatsAppTemplate
+from app.models.templates import WhatsAppTemplate, TemplateMessage
 from fastapi import APIRouter, HTTPException, Request
 from app.models.messages import ScheduledMessage, MessageResponse
 from app.core.scheduler import scheduler
 from app.clients.whatsapp import WhatsAppClient
 from circuitbreaker import circuit
+from fastapi import UploadFile, File
+import tempfile
+import os
 
 router = APIRouter()
 whatsapp_client = WhatsAppClient()
@@ -141,4 +144,38 @@ async def send_scheduled_message(message: ScheduledMessage):
         message.scheduled_time
     )
     return {"job_id": job_id}
+
+@router.post("/batch/template")
+async def send_batch_template(batch_msg: BatchMessage):
+    """Send template message to multiple recipients"""
+    whatsapp_service = WhatsAppService()
+    results = await whatsapp_service.send_batch_template(batch_msg)
+    return {"results": results}
+
+@router.post("/batch/from-csv")
+async def send_batch_from_csv(
+    template_name: str,
+    file: UploadFile = File(...),
+    language_code: str = "en"
+):
+    """Send template message to recipients from CSV file"""
+    whatsapp_service = WhatsAppService()
+    
+    # Save uploaded file temporarily
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        contents = await file.read()
+        temp_file.write(contents)
+        temp_path = temp_file.name
+
+    try:
+        recipients = await whatsapp_service.process_csv_recipients(temp_path)
+        batch_msg = BatchMessage(
+            template_name=template_name,
+            language_code=language_code,
+            recipients=recipients
+        )
+        results = await whatsapp_service.send_batch_template(batch_msg)
+        return {"results": results}
+    finally:
+        os.unlink(temp_path)  # Clean up temp file
 

@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+import os
 from typing import List, Optional
 from functools import lru_cache
 
@@ -7,7 +8,11 @@ class Settings(BaseSettings):
     WHATSAPP_PHONE_NUMBER_ID: str = "development_id"
     WHATSAPP_BUSINESS_ID: str = "development_business_id"
     WEBHOOK_VERIFY_TOKEN: str = "development_webhook_token"
-    DATABASE_URL: str = "sqlite:///messages.db"
+    DATABASE_URL: str = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        'data',
+        'messages.db'
+    )
     INSTAGRAM_ACCESS_TOKEN: str = "development_instagram_token"
     INSTAGRAM_ACCOUNT_ID: str = "development_instagram_id"
 
