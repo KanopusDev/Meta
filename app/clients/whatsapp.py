@@ -3,7 +3,6 @@ from app.core.config import settings
 from app.models.templates import WhatsAppTemplate
 from circuitbreaker import circuit
 from app.utils.monitoring import monitor_request
-from app.utils.metrics import whatsapp_requests, whatsapp_latency
 
 class WhatsAppClient:
     def __init__(self):
@@ -15,7 +14,7 @@ class WhatsAppClient:
         self.base_url = f"https://graph.facebook.com/v21.0/{settings.WHATSAPP_PHONE_NUMBER_ID}"
 
     @circuit(failure_threshold=5, recovery_timeout=60)
-    @monitor_request(whatsapp_requests, whatsapp_latency)
+    @monitor_request(counter_metric='whatsapp_requests', latency_metric='whatsapp_latency')
     async def send_message(self, to_phone: str, message: str):
         payload = {
             "messaging_product": "whatsapp",
@@ -72,7 +71,7 @@ class WhatsAppClient:
         return response.json()
 
     @circuit(failure_threshold=5, recovery_timeout=60)
-    @monitor_request(whatsapp_requests, whatsapp_latency)
+    @monitor_request(counter_metric='whatsapp_requests', latency_metric='whatsapp_latency')
     def send_media(self, to_phone: str, media_url: str, media_type: str):
         payload = {
             "messaging_product": "whatsapp",

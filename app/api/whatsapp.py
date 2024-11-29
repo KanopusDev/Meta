@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.models.messages import ScheduledMessage, MessageResponse
 from app.core.scheduler import scheduler
 from app.clients.whatsapp import WhatsAppClient
+from circuitbreaker import circuit
 
 router = APIRouter()
 whatsapp_client = WhatsAppClient()
@@ -19,7 +20,6 @@ class WhatsAppClient:
         self.base_url = f"https://graph.facebook.com/v21.0/{settings.WHATSAPP_PHONE_NUMBER_ID}"
 
     @circuit(failure_threshold=5, recovery_timeout=60)
-    @monitor_request(whatsapp_requests, whatsapp_latency)
     async def send_message(self, to_phone: str, message: str):
         payload = {
             "messaging_product": "whatsapp",
