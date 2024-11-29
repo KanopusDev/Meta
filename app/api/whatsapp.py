@@ -96,3 +96,49 @@ async def schedule_message(message: ScheduledMessage):
         message.scheduled_time
     )
     return {"job_id": job_id}
+
+@router.post("/send")
+async def send_message(message: ScheduledMessage):
+    response = await whatsapp_client.send_message(
+        message.recipient,
+        message.message
+    )
+    return response
+
+@router.post("/create")
+async def create_template(template: WhatsAppTemplate):
+    response = whatsapp_client.create_template(template)
+    if "error" in response:
+        raise HTTPException(status_code=400, detail=response["error"])
+    return response
+
+@router.get("/list")
+async def list_templates():
+    response = whatsapp_client.get_templates()
+    return response.get("data", [])
+
+@router.delete("/{template_name}")
+async def delete_template(template_name: str):
+    response = whatsapp_client.delete_template(template_name)
+    if "error" in response:
+        raise HTTPException(status_code=400, detail=response["error"])
+    return {"message": f"Template {template_name} deleted successfully"}
+
+@router.post("/send_template")
+async def send_template_message(message: TemplateMessage):
+    response = whatsapp_client.send_template(
+        message.recipient,
+        message.template_name,
+        message.language_code
+    )
+    return response
+
+@router.post("/send_scheduled")
+async def send_scheduled_message(message: ScheduledMessage):
+    job_id = scheduler.schedule_message(
+        message.recipient,
+        message.message,
+        message.scheduled_time
+    )
+    return {"job_id": job_id}
+
