@@ -8,6 +8,7 @@ from circuitbreaker import circuit
 from prometheus_client import Counter, Histogram
 from app.utils.monitoring import monitor_request
 
+
 router = APIRouter()
 
 # Metrics

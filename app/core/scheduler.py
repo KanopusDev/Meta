@@ -1,8 +1,8 @@
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
-from app.api.whatsapp_client import WhatsAppClient
-from app.api.instagram_client import InstagramClient
+from app.api.whatsapp import WhatsAppClient
+from app.api.instagram import InstagramClient
 
 class MessageScheduler:
     def __init__(self):

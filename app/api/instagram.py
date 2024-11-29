@@ -3,6 +3,7 @@ from app.core.config import settings
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
+from app.core.scheduler import scheduler
 
 class InstagramClient:
     def __init__(self):

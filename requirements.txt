@@ -11,3 +11,8 @@ apscheduler
 python-multipart
 pydantic-settings
 sqlalchemy
+slowapi
+prometheus-fastapi-instrumentator
+sentry-sdk
+aiosqlite
+circuitbreaker
