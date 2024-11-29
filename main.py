@@ -15,6 +15,9 @@ whatsapp = WhatsAppClient()
 scheduler = MessageScheduler()
 instagram = InstagramClient()
 
+# Store conversation history
+conversations: Dict[str, list] = {}
+
 class MessageRequest(BaseModel):
     phone: str
     message: str
@@ -131,6 +134,51 @@ async def schedule_template(template_request: TemplateRequest, schedule_time: da
 @app.get("/conversations/{phone}")
 async def get_conversation(phone: str):
     return conversations.get(phone, [])
+
+@app.post("/instagram/send")
+async def send_instagram_message(message_request: InstagramMessageRequest):
+    if message_request.schedule_time:
+        job_id = scheduler.schedule_instagram_message(
+            message_request.recipient_id,
+            message_request.message,
+            message_request.schedule_time
+        )
+        return {"status": "scheduled", "job_id": job_id}
+    else:
+        response = instagram.send_message(
+            message_request.recipient_id,
+            message_request.message
+        )
+        
+        # Store in conversations
+        if message_request.recipient_id not in conversations:
+            conversations[message_request.recipient_id] = []
+        conversations[message_request.recipient_id].append({
+            "from": "admin",
+            "message": message_request.message,
+            "platform": "instagram",
+            "timestamp": datetime.now()
+        })
+        
+        return response
+
+@app.post("/instagram/send-media")
+async def send_instagram_media(media_request: InstagramMediaRequest):
+    if media_request.schedule_time:
+        job_id = scheduler.schedule_instagram_media(
+            media_request.recipient_id,
+            media_request.media_url,
+            media_request.media_type,
+            media_request.schedule_time
+        )
+        return {"status": "scheduled", "job_id": job_id}
+    else:
+        response = instagram.send_media(
+            media_request.recipient_id,
+            media_request.media_url,
+            media_request.media_type
+        )
+        return response
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
