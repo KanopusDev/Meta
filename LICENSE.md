@@ -1,6 +1,6 @@
 ### Canopus Development Software License Agreement
 
-**Copyright (c) [Year] Canopus Development. All rights reserved.**
+**Copyright (c) 2024 Canopus Development. All rights reserved.**
 
 This license agreement governs the use, reproduction, and distribution of the "Meta Messaging API" software (the "Software"). By using, copying, or distributing this software, you agree to the terms of this license.
 
@@ -55,7 +55,7 @@ This license is effective until terminated. Canopus Development may terminate th
 
 ### 6. Governing Law
 
-This agreement shall be governed by and construed in accordance with the laws of [Your Jurisdiction].
+This agreement shall be governed by and construed in accordance with the laws of Indian Judiciary.
 
 ---
 
