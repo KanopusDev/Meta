@@ -61,7 +61,7 @@ The **Meta Messaging API** provides seamless integration with Meta platforms, su
 ### 6. Deployment Guide
 1. Clone the repository:  
    ```bash
-   git clone https://github.com/Canopus-Development/Meta.git
+   git clone https://github.com/Kanopusdev/Meta.git
    cd Meta
    ```
 2. Configure environment variables in `.env`.
